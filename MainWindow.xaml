@@ -5,8 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DocFormatter"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="DocFormatter" Height="100" Width="288">
     <Grid>
-
+        <Menu DockPanel.Dock="Top" Height="25" VerticalAlignment="Top" FontSize="12">
+            <MenuItem Header="Файл">
+                <MenuItem Header="Загрузить, как...." Click="Load_TXT"/>
+            </MenuItem>
+        </Menu>
     </Grid>
 </Window>
