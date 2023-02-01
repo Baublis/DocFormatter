@@ -68,11 +68,10 @@ namespace DocFormatter
 		{
             DefaultDialogService defaultDialogService = new DefaultDialogService();
             if (defaultDialogService.OpenFileDialogTXT())
-            {
-                
-                paragraphs = File.ReadAllLines(defaultDialogService.FilePath);          
-            }
-            Save_PDF();
+            {          
+                paragraphs = File.ReadAllLines(defaultDialogService.FilePath);
+                Save_PDF();
+            }          
         }
 
         private void Save_PDF()
