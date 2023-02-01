@@ -28,11 +28,14 @@ namespace DocFormatter
         /// Переменные
         /// </summary>
         BaseFont BfArial;
+        List<string> sourceList = new List<string>();
         string path_PDF;
         string[] paragraphs;
         static int _sectionNumber = 0;
         static int _pictureNumber = 0;
         static int _tableNumber = 0;
+        int _sourceNumber = 0;
+
 
         /// <summary>
         /// Список контрольных фраз
@@ -94,8 +97,9 @@ namespace DocFormatter
 
             foreach (string paragraph in paragraphs)
             {
-                string textParagraph = paragraph;
-                var iparagraph = new iTextSharp.text.Paragraph(textParagraph, new Font(BfArial, 12f, Font.NORMAL));
+                string textParagraph = SearchSource(paragraph);
+
+                var iparagraph = new iTextSharp.text.Paragraph(textParagraph.Replace("  "," "), new Font(BfArial, 12f, Font.NORMAL));
                 /// <summary>
                 /// Базовый шрифт для парагрофа
                 /// </summary>             
@@ -195,17 +199,61 @@ namespace DocFormatter
                                 break;
                             case 6:
                                 {
+                                    iparagraph = null;
+                                    string csvPath = textParagraph.Replace(arrayControlWords[i], "") .Replace("*", "").Replace("\r", "").Replace("]", "");
+                                    csvPath = new System.IO.FileInfo(path).DirectoryName + "\\" + csvPath;
+                                    string[] listRows = System.IO.File.ReadAllLines(csvPath);
+                                    string[] listTitle = listRows[0].Split(";,".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                                    PdfPTable table = new PdfPTable(listTitle.Length);
+                                    for (var k = 0; k < listTitle.Length; k++)
+                                    {
+                                        PdfPCell cell = new PdfPCell(new Phrase(listTitle[k].ToString(), new Font(BfArial, 12f, Font.BOLD, iTextSharp.text.Color.RED)));
+                                        cell.Column.Alignment = Element.ALIGN_CENTER;
+                                        cell.FixedHeight = 30f;
+                                        table.AddCell(cell);
+                                    }
+                                    for (var j = 1; j < listRows.Length; j++)
+                                    {
+                                        string[] listValues = listRows[j].Split(";,".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                                        for (var k = 0; k < listValues.Length; k++)
+                                        {
+                                            PdfPCell cell = new PdfPCell(new Phrase(listValues[k].ToString(),  new Font(BfArial, 12f, Font.BOLD, iTextSharp.text.Color.GREEN)));
+                                            cell.BackgroundColor = iTextSharp.text.Color.BLACK;
+                                            cell.BorderColor = iTextSharp.text.Color.WHITE;
+                                            cell.FixedHeight = 30f;
+                                            cell.Column.Alignment = Element.ALIGN_CENTER;
+                                            table.AddCell(cell);
+                                        }
+                                    }
+                                    table.HorizontalAlignment = Element.ALIGN_LEFT;
+                                    // Ширина в процентах
+                                    table.WidthPercentage = 100;
+                                    //table.
+                                    //добавляем таблицу в документ
+                                    document.Add(table);
 
                                 }
                                 break;
                             case 7:
                                 {
-
+                                    string replaceString = "";
+                                    for (int j = 0; j < sourceList.Count; j++)
+                                    {
+                                        replaceString = (j + 1).ToString() + ". " + sourceList[j].TrimStart('[').TrimEnd(']') + "\r\n";
+                                        iparagraph = new iTextSharp.text.Paragraph(replaceString, new Font(BfArial, 12f, Font.NORMAL));
+                                        iparagraph.SpacingAfter = 0;
+                                        iparagraph.SpacingBefore = 0;
+                                        iparagraph.FirstLineIndent = 20f;
+                                        iparagraph.ExtraParagraphSpace = 10;
+                                        iparagraph.Alignment = Element.ALIGN_JUSTIFIED;
+                                        document.Add(iparagraph);
+                                    }
                                 }
                                 break;
                             case 8:
                                 {
-
+                                    textParagraph = "тут будет ваш код";
+                                    iparagraph = new iTextSharp.text.Paragraph(textParagraph, new Font(BfArial, 12f, Font.NORMAL));
                                 }
                                 break;
                             case 9:
@@ -237,6 +285,58 @@ namespace DocFormatter
             }
 
             document.Close();
+        }
+
+        private string SearchSource(string text)
+        {
+            if (text.Contains("["))
+            {
+                for (int j=0; j < text.Length; j++)
+                {
+                    if (text[j] == '[' && text[j + 1] != '*')
+                    {
+                        int startIndex = j;
+                        int endIndex = startIndex + 1;
+                        while (endIndex < text.Length && text[endIndex] != ']')
+                        {
+                            endIndex++;
+                        }
+                        string sourceName = "";
+
+                        if (text[endIndex] == ']')
+                        {
+                            for (int k = startIndex; k <= endIndex; k++)
+                            {
+                                sourceName += text[k];
+                            }
+                            int index = 0;
+                            if (!sourceList.Contains(sourceName))
+                            {
+                                //добавляем в список, увеличиваем номер текущей ссылки
+                                sourceList.Add(sourceName);
+                                _sourceNumber++;
+                                index = _sourceNumber;
+                            }
+                            else
+                            {
+                                for (int k = 0; k < sourceList.Count; k++)
+                                {
+                                    //то находим его номер
+                                    if (sourceList[k].Contains(sourceName))
+                                    {
+                                        index = k + 1;
+                                    }
+                                }
+                            }
+                            string replaceString = "[" + index.ToString() + "]";
+                            text = text.Replace(sourceName, replaceString);
+                            j = endIndex;
+                        }
+                    }
+                }
+            }
+
+            return text;
         }
 
         private void ProcessStart(string path)
